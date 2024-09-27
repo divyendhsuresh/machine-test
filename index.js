@@ -81,37 +81,41 @@ app.post('/login', (req, res) => {
         res.send(error)
     }
 })
-
-app.post('/upload', (req, res) => {
+app.post('/uploaddata/chat', (req, res) => {
     try {
-        const file = xlsx.readFile('./chat.xlsx')
+        const file = xlsx.readFile('./chat.xlsx');
         const sheets = file.SheetNames;
         let data = [];
 
         for (let i = 0; i < sheets.length; i++) {
-            const temp = xlsx.utils.sheet_to_json(
-                file.Sheets[file.SheetNames[i]])
-            temp.forEach((res) => {
-                data.push(res)
-            })
+            const temp = xlsx.utils.sheet_to_json(file.Sheets[file.SheetNames[i]]);
+            temp.forEach((row) => {
+                data.push(row);
+            });
         }
 
-        // let newData = data.forEach((item) => {
-        //     console.log(item);
+        data.forEach((entry) => {
+            const name = entry.name ? entry.name.toString().trim() : '';
+            const chat = entry.chat ? entry.chat.toString().trim() : '';
 
-        // },
+            if (name && chat) {
+                const query = 'INSERT INTO exportChat (name, chat) VALUES (?, ?)';
+                database.query(query, [name, chat], (err, result) => {
+                    if (err) {
+                        console.error('Error inserting data:', err.stack);
+                        return res.status(500).send('Failed to insert data');
+                    }
+                });
+            } else {
+                console.warn('Skipping row with missing name or chat:', entry);
+            }
+        });
 
+        res.status(200).send('Data uploaded and inserted successfully');
 
-
-        // let query = `INSERT INTO exportChat (name, chat ) VALUES ('${user.name}', '${encryptedPassword}')`;
-
-        console.log(data);
-
-
-        res.json(data);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to process the uploaded file' });
+        console.error('Error processing file:', error);
+        res.status(500).send('An error occurred while uploading data');
     }
 });
 
